@@ -137,7 +137,7 @@
         async function fetchGameStatus() {
             try {
                 // console.log('Fetching game status...'); // Debug log
-                const res = await fetch('http://127.0.0.1:8000/game/status');
+                const res = await fetch('https://tic-119788516387.asia-east1.run.app');
                 if (!res.ok) {
                     const errorText = await res.text();
                     throw new Error(`無法取得遊戲狀態: ${res.status} ${res.statusText} - ${errorText}`);
