@@ -130,18 +130,20 @@
     </div>
 
     <script>
-        const BACKEND_BASE_URL = 'https://tic-119788516387.asia-east1.run.app'; // 這一行是新的！
+        // 將 BACKEND_BASE_URL 和 gameState 的定義放在這裡，確保只聲明一次
+        const BACKEND_BASE_URL = 'https://tic-119788516387.asia-east1.run.app';
         let gameState = {}; // Global game state
+
         async function fetchGameStatus() {
+            console.log('--- fetchGameStatus() Called ---'); // Debug log
             try {
-                // console.log('Fetching game status...'); // Debug log
                 const res = await fetch(`${BACKEND_BASE_URL}/game/status`);
                 if (!res.ok) {
                     const errorText = await res.text();
                     throw new Error(`無法取得遊戲狀態: ${res.status} ${res.statusText} - ${errorText}`);
                 }
                 gameState = await res.json();
-                // console.log('Game state received:', gameState); // Debug log
+                console.log('fetchGameStatus - Received gameState:', gameState); // Debug log
                 updateUI();
             } catch (err) {
                 console.error('取得遊戲狀態失敗:', err);
@@ -153,54 +155,45 @@
         }
 
         async function sendMove(majorIdx, minorIdx) {
+            console.log(`--- sendMove(${majorIdx}, ${minorIdx}) Called ---`); // Debug log
             if (!gameState || !gameState.player) {
                 document.getElementById('gameMessage').textContent = '遊戲狀態未初始化，無法下棋。';
+                console.warn('sendMove - Game state not initialized or player missing:', gameState); // Debug log
                 return;
             }
+            console.log('sendMove - Current gameState before sending:', gameState); // Debug log
 
-            // Client-side validation (basic, backend does full validation)
             const nextSquare = gameState.next_square;
             const bigStatus = gameState.big_squares?.[majorIdx];
-            const cellValue = gameState.board?.[majorIdx]?.[minorIdx]; // Accessing board like a 2D array
+            const cellValue = gameState.board?.[majorIdx]?.[minorIdx]; 
             
-            // Check if game is already over
             if (gameState.message && gameState.message.includes('遊戲結束')) {
                 document.getElementById('gameMessage').textContent = gameState.message;
                 return;
             }
 
-            // If a specific big square must be played in, and it's not this one
             if (nextSquare !== -1 && majorIdx !== nextSquare) {
                 document.getElementById('gameMessage').textContent = `請在指定的大格 (索引 ${nextSquare}) 下棋！`;
                 return;
             }
 
-            // If the big square is already won/tied
             if (bigStatus && bigStatus !== ' ') {
-                 // Check if next_square is -1 (free choice) and this big square is won/tied
                 if (nextSquare === -1) {
-                    // Allow playing in *any* open big square if next_square is -1
-                    if (bigStatus !== ' ') { // If this chosen big square is won/tied, you can't play there
+                    if (bigStatus !== ' ') {
                         document.getElementById('gameMessage').textContent = `這個大格子 (索引 ${majorIdx}) 已經結束了，請選擇其他可用的格子。`;
                         return;
                     }
-                } else { // next_square is specific, but that square is won/tied
+                } else {
                     document.getElementById('gameMessage').textContent = `指定的大格子 (索引 ${nextSquare}) 已經結束了，您現在可以在任何未結束的大格子下棋。`;
-                    // When the "next_square" itself is won/tied, the backend should set next_square to -1
-                    // So this client-side check might not be fully accurate. Backend is authoritative.
-                    // For now, let's allow it to pass to backend to get official message
-                    // if this scenario (next_square is won but we clicked it) is handled by backend.
                 }
             }
 
-            // If the small cell is already occupied
             if (cellValue && cellValue !== ' ') {
                 document.getElementById('gameMessage').textContent = '這個小格子已被佔據，請選擇其他格子。';
                 return;
             }
 
             try {
-                // console.log(`Sending move: major=${majorIdx}, minor=${minorIdx}, player=${gameState.player}`); // Debug log
                 const res = await fetch(`${BACKEND_BASE_URL}/game/move`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -213,16 +206,15 @@
 
                 if (!res.ok) {
                     const errorData = await res.json();
+                    console.error('sendMove - API response not OK:', res.status, res.statusText, errorData); // Debug log
                     throw new Error(errorData.detail || '移動失敗');
                 }
                 const responseData = await res.json();
-                // console.log('Move response:', responseData); // Debug log
-                // Update gameState directly from response if needed, or re-fetch.
-                // For simplicity, let's re-fetch the status after a successful move.
+                console.log('sendMove - Move responseData:', responseData); // Debug log
                 fetchGameStatus(); // Re-fetch to update UI based on new server state
                 const msgDiv = document.getElementById('gameMessage');
                 if (msgDiv && responseData.message) {
-                     msgDiv.textContent = responseData.message; // Display message from backend
+                    msgDiv.textContent = responseData.message;
                 }
             } catch (err) {
                 console.error('送出移動失敗:', err);
@@ -234,15 +226,16 @@
         }
 
         function updateUI() {
+            console.log('--- updateUI() Called ---'); // Debug log
             if (!gameState.board || !gameState.big_squares) {
-                console.warn('Game state is incomplete, cannot update UI.');
+                console.warn('updateUI - Game state is incomplete, cannot update UI:', gameState); // Debug log
                 return;
             }
+            console.log('updateUI - Current gameState for rendering:', gameState); // Debug log
 
-            // Update small cells
             for (let major = 0; major < 9; major++) {
                 for (let minor = 0; minor < 9; minor++) {
-                    const cellValue = gameState.board[major][minor] || ' '; // Access as 2D array
+                    const cellValue = gameState.board[major][minor] || ' ';
                     const cell = document.querySelector(`.cell[data-major-idx="${major}"][data-minor-idx="${minor}"]`);
                     
                     if (cell) {
@@ -251,92 +244,110 @@
                         if (cellValue === 'X') cell.classList.add('cell-x');
                         if (cellValue === 'O') cell.classList.add('cell-o');
                         
-                        // Disable cell if occupied or if the big square is won/tied
                         const bigSquareStatus = gameState.big_squares[major];
                         if (cellValue !== ' ' || bigSquareStatus !== ' ') {
                             cell.disabled = true;
                         } else {
-                            cell.disabled = false; // Re-enable if clear
+                            cell.disabled = false;
                         }
                     }
                 }
             }
 
-            // Update big squares status (won/tie) and remove active highlight
             for (let bigIdx = 0; bigIdx < 9; bigIdx++) {
                 const bigStatus = gameState.big_squares[bigIdx] || ' ';
                 const bigContainer = document.querySelector(`.big-square[data-big-idx="${bigIdx}"]`);
                 if (bigContainer) {
-                    bigContainer.classList.remove('won-x', 'won-o', 'tie', 'active-square'); // Remove all before re-applying
+                    bigContainer.classList.remove('won-x', 'won-o', 'tie', 'active-square');
                     if (bigStatus === 'X') bigContainer.classList.add('won-x');
                     if (bigStatus === 'O') bigContainer.classList.add('won-o');
                     if (bigStatus === 'T') bigContainer.classList.add('tie');
                 }
             }
 
-            // Apply highlight for next playable big square(s)
             const nextSquare = gameState.next_square;
-            const isGameOver = gameState.message && gameState.message.includes('遊戲結束'); // Check if backend sent game over message
+            const isGameOver = gameState.message && gameState.message.includes('遊戲結束');
 
             if (!isGameOver) {
                 for (let bigIdx = 0; bigIdx < 9; bigIdx++) {
                     const bigContainer = document.querySelector(`.big-square[data-big-idx="${bigIdx}"]`);
                     const bigSquareStatus = gameState.big_squares[bigIdx];
 
-                    if (bigContainer && bigSquareStatus === ' ') { // Only highlight if not already won/tied
+                    if (bigContainer && bigSquareStatus === ' ') {
                         if (nextSquare === -1) {
-                            // Any un-won/un-tied big square is active
                             bigContainer.classList.add('active-square');
                         } else if (bigIdx === nextSquare) {
-                            // Only the specified big square is active
                             bigContainer.classList.add('active-square');
                         }
                     }
                 }
+            } else {
+                console.log('updateUI - Game is over, disabling board.');
+                disableBoard();
             }
 
-
-            // Display current player
             const playerDisplay = document.getElementById('currentPlayerDisplay');
             if (playerDisplay) {
                 playerDisplay.textContent = `當前玩家: ${gameState.player || '載入中...'}`;
                 if (isGameOver) {
-                     playerDisplay.textContent = `遊戲已結束`;
+                    playerDisplay.textContent = `遊戲已結束`;
                 }
             }
 
-            // Display game messages
             const msgDiv = document.getElementById('gameMessage');
             if (msgDiv) {
                 if (isGameOver) {
                     msgDiv.textContent = gameState.message;
-                    disableBoard();
-                } else if (gameState.message && gameState.message !== "移動成功！") { // Display temporary messages from backend
+                } else if (gameState.message && gameState.message !== "移動成功！") {
                     msgDiv.textContent = gameState.message;
                 } else {
-                    msgDiv.textContent = ''; // Clear message if it's just "移動成功" or no specific message
+                    msgDiv.textContent = '';
                 }
             }
         }
 
         function disableBoard() {
-            const cells = document.querySelectorAll('.cell'); // Select all cells
+            console.log('--- disableBoard() Called ---'); // Debug log
+            const cells = document.querySelectorAll('.cell');
             cells.forEach(cell => cell.disabled = true);
         }
 
-        // Initialize game when DOM is loaded
+        async function resetGame() {
+            console.log('--- resetGame() Called ---'); // Debug log
+            try {
+                const res = await fetch(`${BACKEND_BASE_URL}/game/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`無法重置遊戲: ${res.status} ${res.statusText} - ${errorText}`);
+                }
+                gameState = await res.json();
+                console.log('resetGame - Game reset and initialized with gameState:', gameState); // Debug log
+                updateUI();
+                document.getElementById('gameMessage').textContent = gameState.message || '遊戲已開始！';
+            } catch (err) {
+                console.error('重置遊戲失敗:', err);
+                const msgDiv = document.getElementById('gameMessage');
+                if (msgDiv) {
+                    msgDiv.textContent = `遊戲重置失敗: ${err.message || err}。請檢查後端。`;
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            // Add click event listeners to all cells
+            console.log('DOMContentLoaded fired.'); // Debug log
             const cells = document.querySelectorAll('.cell');
             cells.forEach(cell => {
                 cell.addEventListener('click', () => {
                     const majorIdx = Number(cell.dataset.majorIdx);
                     const minorIdx = Number(cell.dataset.minorIdx);
-                    // console.log(`Cell clicked: Major=${majorIdx}, Minor=${minorIdx}`); // Debug log
+                    console.log(`Cell clicked: Major=${majorIdx}, Minor=${minorIdx}`); // Debug log
                     sendMove(majorIdx, minorIdx);
                 });
             });
-            fetchGameStatus(); // Fetch initial game status
+            resetGame(); // 頁面加載時自動重置遊戲
         });
     </script>
 </body>
