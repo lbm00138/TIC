@@ -117,25 +117,33 @@
     </div>
 
     <div id="gameContainer">
-        <script>
-            for (let major = 0; major < 9; major++) {
-                document.write(`<div class="big-square" data-big-idx="${major}">`);
-                // Loop for 9 small cells inside each big square
-                for (let minor = 0; minor < 9; minor++) {
-                    document.write(`<button class="cell" data-major-idx="${major}" data-minor-idx="${minor}"></button>`);
-                }
-                document.write(`</div>`);
-            }
-        </script>
-    </div>
+        </div>
 
     <script>
-        // 將 BACKEND_BASE_URL 和 gameState 的定義放在這裡，確保只聲明一次
         const BACKEND_BASE_URL = 'https://tic-119788516387.asia-east1.run.app';
         let gameState = {}; // Global game state
 
+        // Function to create the game board elements
+        function createGameBoard() {
+            const gameContainer = document.getElementById('gameContainer');
+            for (let major = 0; major < 9; major++) {
+                const bigSquare = document.createElement('div');
+                bigSquare.classList.add('big-square');
+                bigSquare.dataset.bigIdx = major;
+
+                for (let minor = 0; minor < 9; minor++) {
+                    const cell = document.createElement('button');
+                    cell.classList.add('cell');
+                    cell.dataset.majorIdx = major;
+                    cell.dataset.minorIdx = minor;
+                    bigSquare.appendChild(cell);
+                }
+                gameContainer.appendChild(bigSquare);
+            }
+        }
+
         async function fetchGameStatus() {
-            console.log('--- fetchGameStatus() Called ---'); // Debug log
+            console.log('--- fetchGameStatus() Called ---');
             try {
                 const res = await fetch(`${BACKEND_BASE_URL}/game/status`);
                 if (!res.ok) {
@@ -143,7 +151,7 @@
                     throw new Error(`無法取得遊戲狀態: ${res.status} ${res.statusText} - ${errorText}`);
                 }
                 gameState = await res.json();
-                console.log('fetchGameStatus - Received gameState:', gameState); // Debug log
+                console.log('fetchGameStatus - Received gameState:', gameState);
                 updateUI();
             } catch (err) {
                 console.error('取得遊戲狀態失敗:', err);
@@ -155,13 +163,13 @@
         }
 
         async function sendMove(majorIdx, minorIdx) {
-            console.log(`--- sendMove(${majorIdx}, ${minorIdx}) Called ---`); // Debug log
+            console.log(`--- sendMove(${majorIdx}, ${minorIdx}) Called ---`);
             if (!gameState || !gameState.player) {
                 document.getElementById('gameMessage').textContent = '遊戲狀態未初始化，無法下棋。';
-                console.warn('sendMove - Game state not initialized or player missing:', gameState); // Debug log
+                console.warn('sendMove - Game state not initialized or player missing:', gameState);
                 return;
             }
-            console.log('sendMove - Current gameState before sending:', gameState); // Debug log
+            console.log('sendMove - Current gameState before sending:', gameState);
 
             const nextSquare = gameState.next_square;
             const bigStatus = gameState.big_squares?.[majorIdx];
@@ -184,7 +192,10 @@
                         return;
                     }
                 } else {
-                    document.getElementById('gameMessage').textContent = `指定的大格子 (索引 ${nextSquare}) 已經結束了，您現在可以在任何未結束的大格子下棋。`;
+                    document.getElementById('gameMessage').textContent = `指定的大格子 (索引 ${nextSquare}) 已結束。`;
+                    // If bigSquare is finished but it's the target, it means player can pick any available.
+                    // This logic might need slight adjustment based on exact game rules.
+                    // For now, assuming if target square is finished, player can choose freely (handled by backend).
                 }
             }
 
@@ -206,11 +217,11 @@
 
                 if (!res.ok) {
                     const errorData = await res.json();
-                    console.error('sendMove - API response not OK:', res.status, res.statusText, errorData); // Debug log
+                    console.error('sendMove - API response not OK:', res.status, res.statusText, errorData);
                     throw new Error(errorData.detail || '移動失敗');
                 }
                 const responseData = await res.json();
-                console.log('sendMove - Move responseData:', responseData); // Debug log
+                console.log('sendMove - Move responseData:', responseData);
                 fetchGameStatus(); // Re-fetch to update UI based on new server state
                 const msgDiv = document.getElementById('gameMessage');
                 if (msgDiv && responseData.message) {
@@ -226,12 +237,12 @@
         }
 
         function updateUI() {
-            console.log('--- updateUI() Called ---'); // Debug log
+            console.log('--- updateUI() Called ---');
             if (!gameState.board || !gameState.big_squares) {
-                console.warn('updateUI - Game state is incomplete, cannot update UI:', gameState); // Debug log
+                console.warn('updateUI - Game state is incomplete, cannot update UI:', gameState);
                 return;
             }
-            console.log('updateUI - Current gameState for rendering:', gameState); // Debug log
+            console.log('updateUI - Current gameState for rendering:', gameState);
 
             for (let major = 0; major < 9; major++) {
                 for (let minor = 0; minor < 9; minor++) {
@@ -245,10 +256,19 @@
                         if (cellValue === 'O') cell.classList.add('cell-o');
                         
                         const bigSquareStatus = gameState.big_squares[major];
-                        if (cellValue !== ' ' || bigSquareStatus !== ' ') {
+                        const isGameOver = gameState.message && gameState.message.includes('遊戲結束');
+                        
+                        // Disable cells if occupied, big square is won/tied, or game is over
+                        if (cellValue !== ' ' || bigSquareStatus !== ' ' || isGameOver) {
                             cell.disabled = true;
                         } else {
-                            cell.disabled = false;
+                            // Only enable if it's the correct big square or next_square is -1
+                            const nextSquare = gameState.next_square;
+                            if (nextSquare === -1 || major === nextSquare) {
+                                cell.disabled = false;
+                            } else {
+                                cell.disabled = true; // Disable if not the active square
+                            }
                         }
                     }
                 }
@@ -307,13 +327,13 @@
         }
 
         function disableBoard() {
-            console.log('--- disableBoard() Called ---'); // Debug log
+            console.log('--- disableBoard() Called ---');
             const cells = document.querySelectorAll('.cell');
             cells.forEach(cell => cell.disabled = true);
         }
 
         async function resetGame() {
-            console.log('--- resetGame() Called ---'); // Debug log
+            console.log('--- resetGame() Called ---');
             try {
                 const res = await fetch(`${BACKEND_BASE_URL}/game/reset`, {
                     method: 'POST',
@@ -324,7 +344,7 @@
                     throw new Error(`無法重置遊戲: ${res.status} ${res.statusText} - ${errorText}`);
                 }
                 gameState = await res.json();
-                console.log('resetGame - Game reset and initialized with gameState:', gameState); // Debug log
+                console.log('resetGame - Game reset and initialized with gameState:', gameState);
                 updateUI();
                 document.getElementById('gameMessage').textContent = gameState.message || '遊戲已開始！';
             } catch (err) {
@@ -337,17 +357,18 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOMContentLoaded fired.'); // Debug log
+            console.log('DOMContentLoaded fired.');
+            createGameBoard(); // Create the board elements dynamically
             const cells = document.querySelectorAll('.cell');
             cells.forEach(cell => {
                 cell.addEventListener('click', () => {
                     const majorIdx = Number(cell.dataset.majorIdx);
                     const minorIdx = Number(cell.dataset.minorIdx);
-                    console.log(`Cell clicked: Major=${majorIdx}, Minor=${minorIdx}`); // Debug log
+                    console.log(`Cell clicked: Major=${majorIdx}, Minor=${minorIdx}`);
                     sendMove(majorIdx, minorIdx);
                 });
             });
-            resetGame(); // 頁面加載時自動重置遊戲
+            resetGame(); // Auto-reset game on page load
         });
     </script>
 </body>
