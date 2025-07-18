@@ -120,7 +120,7 @@ async def read_root():
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
-        return html_content
+        return FileResponse(file_path) # 直接返回 FileResponse，讓FastAPI處理檔案讀取和響應頭
     except FileNotFoundError:
         # 如果找不到檔案，返回 404 錯誤
         raise HTTPException(status_code=404, detail=f"Frontend HTML file not found at {file_path}. Please ensure test1.html is copied to the container.")
