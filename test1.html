@@ -203,7 +203,7 @@
 
             try {
                 // console.log(`Sending move: major=${majorIdx}, minor=${minorIdx}, player=${gameState.player}`); // Debug log
-                const res = await fetch('http://127.0.0.1:8000/game/move', {
+                const res = await fetch('https://tic-119788516387.asia-east1.run.app', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
