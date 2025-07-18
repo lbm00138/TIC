@@ -118,8 +118,8 @@
 
     <div id="gameContainer">
         <script>
-            // This JavaScript block is used to dynamically generate the HTML for the board.
-            // It runs when the page loads, before the main script.
+            const BACKEND_BASE_URL = 'https://tic-119788516387.asia-east1.run.app'; // 這一行是新的！
+            let gameState = {}; // Global game state
             for (let major = 0; major < 9; major++) {
                 document.write(`<div class="big-square" data-big-idx="${major}">`);
                 // Loop for 9 small cells inside each big square
@@ -137,7 +137,7 @@
         async function fetchGameStatus() {
             try {
                 // console.log('Fetching game status...'); // Debug log
-                const res = await fetch('https://tic-119788516387.asia-east1.run.app');
+                const res = await fetch(`${BACKEND_BASE_URL}/game/status`);
                 if (!res.ok) {
                     const errorText = await res.text();
                     throw new Error(`無法取得遊戲狀態: ${res.status} ${res.statusText} - ${errorText}`);
@@ -203,7 +203,7 @@
 
             try {
                 // console.log(`Sending move: major=${majorIdx}, minor=${minorIdx}, player=${gameState.player}`); // Debug log
-                const res = await fetch('https://tic-119788516387.asia-east1.run.app', {
+                const res = await fetch(`${BACKEND_BASE_URL}/game/move`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
