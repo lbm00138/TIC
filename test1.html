@@ -118,8 +118,6 @@
 
     <div id="gameContainer">
         <script>
-            const BACKEND_BASE_URL = 'https://tic-119788516387.asia-east1.run.app'; // 這一行是新的！
-            let gameState = {}; // Global game state
             for (let major = 0; major < 9; major++) {
                 document.write(`<div class="big-square" data-big-idx="${major}">`);
                 // Loop for 9 small cells inside each big square
@@ -132,8 +130,9 @@
     </div>
 
     <script>
+        const BACKEND_BASE_URL = 'https://tic-119788516387.asia-east1.run.app'; // 這一行是新的！
         let gameState = {}; // Global game state
-
+        let gameState = {}; // Global game state
         async function fetchGameStatus() {
             try {
                 // console.log('Fetching game status...'); // Debug log
