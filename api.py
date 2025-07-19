@@ -1,7 +1,7 @@
 # 九宮格遊戲/api.py
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse # 引入 HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles # 引入 StaticFiles (如果還有其他靜態檔案如CSS/JS)
 from pydantic import BaseModel
 import os # 引入 os 模組用於檔案路徑操作
