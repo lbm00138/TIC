@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 將您的 FastAPI 應用程式碼和前端 HTML 檔案複製到容器中
 # 假設 api.py 和 test1.html 在 Dockerfile 的同一層目錄
 COPY api.py .
-COPY test1.html . # <-- 確保這個檔案與 Dockerfile 在同一層級
+COPY test1.html . 
 
 # 如果您還有其他靜態檔案 (例如 CSS 或 JS 檔案，並且在 test1.html 中有引用)
 # 並且這些檔案在一個名為 'static' 的資料夾中，您需要將其複製進來
