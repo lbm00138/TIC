@@ -30,4 +30,4 @@ ENV PORT 8080
 # --workers 1 表示使用一個 worker 進程 (對於簡單應用足夠)
 # --bind 0.0.0.0:${PORT} 綁定到所有網路接口和指定的端口
 # --worker-class uvicorn.workers.UvicornWorker 使用 Uvicorn worker 類別，因為 FastAPI 依賴 Uvicorn
-CMD ["gunicorn", "api:app", "--workers", "1", "--bind", "0.0.0.0:8080", "--worker-class", "uvicorn.workers.UvicornWorker"]
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8080"]
